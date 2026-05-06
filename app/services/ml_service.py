@@ -1,5 +1,3 @@
-"""Stub model loader that returns hardcoded recommendations; replace with real inference by swapping this function."""
-
 from app.schemas.crops_request import CropsRequest
 from app.schemas.crops_response import CropsResponse, CropRecommendation
 

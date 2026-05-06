@@ -1,5 +1,3 @@
-"""Pydantic v2 request schema for the crop recommendation endpoint with field-level validation."""
-
 from pydantic import BaseModel, Field
 
 

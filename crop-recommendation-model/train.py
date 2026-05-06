@@ -1,5 +1,3 @@
-"""Reads the dataset CSV, trains a crop classifier model, and exports it as a .pkl file into app/models/."""
-
 import yaml
 import joblib
 from pathlib import Path

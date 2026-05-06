@@ -1,5 +1,3 @@
-"""Reads dataset.csv from disk and returns a feature matrix X and target label series y."""
-
 import pandas as pd
 from typing import List, Tuple
 

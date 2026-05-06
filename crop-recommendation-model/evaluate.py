@@ -1,5 +1,3 @@
-"""Loads a trained crop classifier and prints a classification report on a held-out test split."""
-
 import yaml
 import joblib
 from pathlib import Path

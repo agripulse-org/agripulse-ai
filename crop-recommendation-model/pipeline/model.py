@@ -1,5 +1,3 @@
-"""Wraps RandomForestClassifier as a configurable crop classifier; swap for XGBoost by changing the estimator."""
-
 from sklearn.ensemble import RandomForestClassifier
 
 

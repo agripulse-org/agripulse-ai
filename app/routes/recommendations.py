@@ -1,5 +1,3 @@
-"""Route handler for POST /api/recommendations/crops; delegates inference to the ML service."""
-
 from fastapi import APIRouter
 from app.schemas.crops_request import CropsRequest
 from app.schemas.crops_response import CropsResponse

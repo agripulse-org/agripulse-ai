@@ -1,5 +1,3 @@
-"""Pydantic v2 response schema for the crop recommendation endpoint."""
-
 from pydantic import BaseModel, Field
 from typing import List
 

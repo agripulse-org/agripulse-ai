@@ -1,5 +1,3 @@
-"""FastAPI application entry point; registers routes and exposes the health check endpoint."""
-
 from fastapi import FastAPI
 from app.routes import recommendations
 

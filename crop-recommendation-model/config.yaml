@@ -8,7 +8,7 @@ features:
   - rainfall
 
 data:
-  dataset_path: crop-classifier/data/dataset.csv
+  dataset_path: crop-recommendation-model/data/dataset.csv
 
 hyperparams:
   n_estimators: 100
