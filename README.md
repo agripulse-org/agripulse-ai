@@ -53,7 +53,7 @@ The service and training pipeline are decoupled: train offline, drop the `.pkl` 
    python evaluate.py
    ```
 
-Configuration (features, hyperparameters, dataset path) lives in `crop-recommendation-model/config.yaml` — no `.env` file needed for training.
+Configuration (features, hyperparameters, dataset path) lives in `crop-recommendation-model/config.yaml`.
 
 ## Running the Service
 
@@ -102,9 +102,9 @@ docker run -p 8000:8000 agripulse-ai
 
 The container includes a health check (`GET /health`) that runs every 60 seconds.
 
-To mount a trained model into the container:
+To run the docker container:
 ```bash
-docker run -p 8000:8000 -v $(pwd)/app/models:/service/app/models agripulse-ai
+docker run -p 8000:8000 agripulse-ai
 ```
 
 ## Running Tests
