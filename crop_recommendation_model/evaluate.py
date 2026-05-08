@@ -11,7 +11,8 @@ def evaluate():
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
-    X, y = load_dataset(config["data"]["dataset_path"], config["features"])
+    dataset_path = config_path.parent / config["data"]["dataset_path"]
+    X, y = load_dataset(str(dataset_path), config["features"])
     _, X_test, _, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     artifact_path = Path(__file__).parent.parent / "app" / "models" / "crop_classifier.pkl"

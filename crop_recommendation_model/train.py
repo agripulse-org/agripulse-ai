@@ -11,7 +11,8 @@ def train():
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
-    X, y = load_dataset(config["data"]["dataset_path"], config["features"])
+    dataset_path = config_path.parent / config["data"]["dataset_path"]
+    X, y = load_dataset(str(dataset_path), config["features"])
     preprocessor = build_preprocessor()
     X_processed = preprocessor.fit_transform(X)
 

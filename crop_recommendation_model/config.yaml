@@ -1,14 +1,14 @@
 features:
   - nitrogen
-  - phosphorus
+  - phosphorous
   - potassium
   - temperature
   - humidity
-  - ph
-  - rainfall
+  - moisture
+  - soil_type
 
 data:
-  dataset_path: crop-recommendation-model/data/dataset.csv
+  dataset_path: data/soil_crop_dataset.csv
 
 hyperparams:
   n_estimators: 100
