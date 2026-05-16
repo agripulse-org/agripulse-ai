@@ -20,7 +20,7 @@ def evaluate():
     label_encoder = artifact["label_encoder"]
     y = label_encoder.transform(y_raw)
 
-    _, X_test, _, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    _, X_test, _, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
     X_test_processed = artifact["preprocessor"].transform(X_test)
     y_pred = artifact["model"].predict(X_test_processed)
