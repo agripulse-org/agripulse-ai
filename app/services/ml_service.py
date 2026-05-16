@@ -34,17 +34,13 @@ def get_crop_recommendations(request: CropsRequest) -> CropsResponse:
     X_proc = preprocessor.transform(input_df)
     probabilities = model.predict_proba(X_proc)[0]
 
-    top_indices = np.argsort(probabilities)[::-1][:3]
-    top_crops = []
-    for idx in top_indices:
-        label = label_encoder.classes_[idx]
-        crop = CropType.from_dataset_label(label)
-        if crop is not None:
-            top_crops.append(CropScore(crop=crop, confidence=round(float(probabilities[idx]), 4)))
+    sorted_indices = np.argsort(probabilities)[::-1]
+    recommendations = [
+        CropScore(crop=CropType.from_dataset_label(label_encoder.classes_[idx]), recommendation_score=round(float(probabilities[idx]), 4))
+        for idx in sorted_indices
+    ]
 
-    best = top_crops[0]
     return CropsResponse(
-        recommended_crop=best.crop,
-        confidence=best.confidence,
-        top_3_crops=top_crops,
+        best_crop=recommendations[0].crop,
+        recommendations=recommendations,
     )
