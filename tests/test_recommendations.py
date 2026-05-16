@@ -19,15 +19,14 @@ def test_recommend_crops_success():
     response = client.post("/api/recommendations/crops", json=VALID_PAYLOAD)
     assert response.status_code == 200
     data = response.json()
-    assert "recommended_crop" in data
-    assert "confidence" in data
-    assert "top_3_crops" in data
-    assert len(data["top_3_crops"]) == 3
-    first = data["top_3_crops"][0]
+    assert "best_crop" in data
+    assert "recommendations" in data
+    assert len(data["recommendations"]) == 13
+    first = data["recommendations"][0]
     assert "crop" in first
-    assert "confidence" in first
-    assert 0.0 <= first["confidence"] <= 1.0
-    assert data["recommended_crop"] == data["top_3_crops"][0]["crop"]
+    assert "recommendation_score" in first
+    assert 0.0 <= first["recommendation_score"] <= 1.0
+    assert data["best_crop"] == first["crop"]
 
 
 def test_recommend_crops_missing_fields():

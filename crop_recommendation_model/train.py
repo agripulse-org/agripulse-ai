@@ -2,7 +2,7 @@ import yaml
 import joblib
 import numpy as np
 from pathlib import Path
-from sklearn.model_selection import train_test_split, RandomizedSearchCV, StratifiedKFold
+from sklearn.model_selection import train_test_split, RandomizedSearchCV, StratifiedKFold, cross_val_score
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
@@ -29,7 +29,7 @@ def _tune_random_forest(X, y):
     )
     search.fit(X, y)
     print(f"  RandomForest best CV accuracy: {search.best_score_:.4f}  params: {search.best_params_}")
-    return search.best_estimator_
+    return search.best_estimator_, search.best_score_
 
 
 def _tune_xgboost(X, y, n_classes):
@@ -54,7 +54,7 @@ def _tune_xgboost(X, y, n_classes):
     )
     search.fit(X, y)
     print(f"  XGBoost best CV accuracy: {search.best_score_:.4f}  params: {search.best_params_}")
-    return search.best_estimator_
+    return search.best_estimator_, search.best_score_
 
 
 def _tune_gradient_boosting(X, y):
@@ -72,7 +72,7 @@ def _tune_gradient_boosting(X, y):
     )
     search.fit(X, y)
     print(f"  GradientBoosting best CV accuracy: {search.best_score_:.4f}  params: {search.best_params_}")
-    return search.best_estimator_
+    return search.best_estimator_, search.best_score_
 
 
 def train():
@@ -96,9 +96,9 @@ def train():
     X_test_proc = preprocessor.transform(X_test)
 
     print("Tuning models (this may take a minute)...")
-    rf = _tune_random_forest(X_train_proc, y_train)
-    xgb = _tune_xgboost(X_train_proc, y_train, n_classes)
-    gb = _tune_gradient_boosting(X_train_proc, y_train)
+    rf, rf_cv = _tune_random_forest(X_train_proc, y_train)
+    xgb, xgb_cv = _tune_xgboost(X_train_proc, y_train, n_classes)
+    gb, gb_cv = _tune_gradient_boosting(X_train_proc, y_train)
 
     # Soft-voting ensemble of all three tuned models
     ensemble = VotingClassifier(
@@ -107,29 +107,23 @@ def train():
         n_jobs=-1,
     )
     ensemble.fit(X_train_proc, y_train)
+    ensemble_cv = cross_val_score(ensemble, X_train_proc, y_train, cv=CV, scoring="accuracy", n_jobs=-1).mean()
+    print(f"  Ensemble CV accuracy: {ensemble_cv:.4f}")
 
-    candidates = {
-        "RandomForest": rf,
-        "XGBoost": xgb,
-        "GradientBoosting": gb,
-        "Ensemble": ensemble,
-    }
+    # Select best model by CV score — test set is reserved for final evaluation only
+    cv_scores = {"RandomForest": rf_cv, "XGBoost": xgb_cv, "GradientBoosting": gb_cv, "Ensemble": ensemble_cv}
+    candidates = {"RandomForest": rf, "XGBoost": xgb, "GradientBoosting": gb, "Ensemble": ensemble}
 
-    results = {}
-    for name, model in candidates.items():
-        y_pred = model.predict(X_test_proc)
-        acc = accuracy_score(y_test, y_pred)
-        results[name] = {"model": model, "accuracy": acc}
+    best_name = max(cv_scores, key=cv_scores.__getitem__)
+    best_model = candidates[best_name]
+    print(f"\nBest model by CV: {best_name} (CV accuracy={cv_scores[best_name]:.4f})")
 
-        print(f"\n{'='*50}")
-        print(f"Model: {name}  |  Accuracy: {acc:.4f}")
-        print(classification_report(y_test, y_pred, target_names=label_encoder.classes_))
-        print("Confusion matrix:")
-        print(confusion_matrix(y_test, y_pred))
-
-    best_name = max(results, key=lambda n: results[n]["accuracy"])
-    best_model = results[best_name]["model"]
-    print(f"\nBest model: {best_name} (accuracy={results[best_name]['accuracy']:.4f})")
+    print("\n--- Final test-set evaluation ---")
+    y_pred = best_model.predict(X_test_proc)
+    print(f"Test accuracy: {accuracy_score(y_test, y_pred):.4f}")
+    print(classification_report(y_test, y_pred, target_names=label_encoder.classes_))
+    print("Confusion matrix:")
+    print(confusion_matrix(y_test, y_pred))
 
     output_path = Path(__file__).parent.parent / "app" / "models" / "crop_classifier.pkl"
     output_path.parent.mkdir(parents=True, exist_ok=True)
