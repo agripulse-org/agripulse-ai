@@ -1,9 +1,78 @@
 import yaml
 import joblib
+import numpy as np
 from pathlib import Path
+from sklearn.model_selection import train_test_split, RandomizedSearchCV, StratifiedKFold, cross_val_score
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from xgboost import XGBClassifier
+
 from data.loader import load_dataset
 from pipeline.preprocessor import build_preprocessor
-from pipeline.model import build_model
+
+CV = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+
+def _tune_random_forest(X, y):
+    param_dist = {
+        "n_estimators": [200, 300, 400, 500],
+        "max_depth": [None, 15, 20, 30],
+        "max_features": ["sqrt", "log2", 0.3, 0.5],
+        "min_samples_leaf": [1, 2, 4],
+        "min_samples_split": [2, 5, 10],
+    }
+    search = RandomizedSearchCV(
+        RandomForestClassifier(random_state=42),
+        param_dist, n_iter=20, cv=CV,
+        scoring="accuracy", n_jobs=-1, random_state=42, verbose=0,
+    )
+    search.fit(X, y)
+    print(f"  RandomForest best CV accuracy: {search.best_score_:.4f}  params: {search.best_params_}")
+    return search.best_estimator_, search.best_score_
+
+
+def _tune_xgboost(X, y, n_classes):
+    param_dist = {
+        "n_estimators": [200, 300, 400],
+        "max_depth": [4, 6, 8, 10],
+        "learning_rate": [0.05, 0.1, 0.15, 0.2],
+        "subsample": [0.7, 0.8, 0.9, 1.0],
+        "colsample_bytree": [0.6, 0.7, 0.8, 1.0],
+        "min_child_weight": [1, 3, 5],
+    }
+    search = RandomizedSearchCV(
+        XGBClassifier(
+            objective="multi:softprob",
+            num_class=n_classes,
+            eval_metric="mlogloss",
+            verbosity=0,
+            random_state=42,
+        ),
+        param_dist, n_iter=20, cv=CV,
+        scoring="accuracy", n_jobs=-1, random_state=42, verbose=0,
+    )
+    search.fit(X, y)
+    print(f"  XGBoost best CV accuracy: {search.best_score_:.4f}  params: {search.best_params_}")
+    return search.best_estimator_, search.best_score_
+
+
+def _tune_gradient_boosting(X, y):
+    param_dist = {
+        "n_estimators": [200, 300, 400],
+        "max_depth": [3, 4, 5],
+        "learning_rate": [0.05, 0.1, 0.15],
+        "subsample": [0.7, 0.8, 0.9],
+        "max_features": ["sqrt", "log2", 0.5],
+    }
+    search = RandomizedSearchCV(
+        GradientBoostingClassifier(random_state=42),
+        param_dist, n_iter=15, cv=CV,
+        scoring="accuracy", n_jobs=-1, random_state=42, verbose=0,
+    )
+    search.fit(X, y)
+    print(f"  GradientBoosting best CV accuracy: {search.best_score_:.4f}  params: {search.best_params_}")
+    return search.best_estimator_, search.best_score_
 
 
 def train():
@@ -11,17 +80,63 @@ def train():
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
-    X, y = load_dataset(config["data"]["dataset_path"], config["features"])
-    preprocessor = build_preprocessor()
-    X_processed = preprocessor.fit_transform(X)
+    dataset_path = config_path.parent / config["data"]["dataset_path"]
+    X, y_raw = load_dataset(str(dataset_path), config["features"])
 
-    model = build_model(config["hyperparams"])
-    model.fit(X_processed, y)
+    label_encoder = LabelEncoder()
+    y = label_encoder.fit_transform(y_raw)
+    n_classes = len(label_encoder.classes_)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    preprocessor = build_preprocessor()
+    X_train_proc = preprocessor.fit_transform(X_train)
+    X_test_proc = preprocessor.transform(X_test)
+
+    print("Tuning models (this may take a minute)...")
+    rf, rf_cv = _tune_random_forest(X_train_proc, y_train)
+    xgb, xgb_cv = _tune_xgboost(X_train_proc, y_train, n_classes)
+    gb, gb_cv = _tune_gradient_boosting(X_train_proc, y_train)
+
+    # Soft-voting ensemble of all three tuned models
+    ensemble = VotingClassifier(
+        estimators=[("rf", rf), ("xgb", xgb), ("gb", gb)],
+        voting="soft",
+        n_jobs=-1,
+    )
+    ensemble.fit(X_train_proc, y_train)
+    ensemble_cv = cross_val_score(ensemble, X_train_proc, y_train, cv=CV, scoring="accuracy", n_jobs=-1).mean()
+    print(f"  Ensemble CV accuracy: {ensemble_cv:.4f}")
+
+    # Select best model by CV score — test set is reserved for final evaluation only
+    cv_scores = {"RandomForest": rf_cv, "XGBoost": xgb_cv, "GradientBoosting": gb_cv, "Ensemble": ensemble_cv}
+    candidates = {"RandomForest": rf, "XGBoost": xgb, "GradientBoosting": gb, "Ensemble": ensemble}
+
+    best_name = max(cv_scores, key=cv_scores.__getitem__)
+    best_model = candidates[best_name]
+    print(f"\nBest model by CV: {best_name} (CV accuracy={cv_scores[best_name]:.4f})")
+
+    print("\n--- Final test-set evaluation ---")
+    y_pred = best_model.predict(X_test_proc)
+    print(f"Test accuracy: {accuracy_score(y_test, y_pred):.4f}")
+    print(classification_report(y_test, y_pred, target_names=label_encoder.classes_))
+    print("Confusion matrix:")
+    print(confusion_matrix(y_test, y_pred))
 
     output_path = Path(__file__).parent.parent / "app" / "models" / "crop_classifier.pkl"
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump({"model": model, "preprocessor": preprocessor}, output_path)
-    print(f"Model saved to {output_path}")
+    joblib.dump(
+        {
+            "model": best_model,
+            "preprocessor": preprocessor,
+            "label_encoder": label_encoder,
+        },
+        output_path,
+    )
+    print(f"Artifact saved to {output_path}")
+    print(f"Crop classes: {list(label_encoder.classes_)}")
 
 
 if __name__ == "__main__":
