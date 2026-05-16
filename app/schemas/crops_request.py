@@ -4,9 +4,33 @@ from app.schemas.soil_type import SoilType
 
 
 class CropsRequest(BaseModel):
-    nitrogen: float = Field(..., ge=0, le=140, description="Nitrogen (N) content in the soil. Unit: mg/kg. Typical range: 0–140.")
-    temperature: float = Field(..., ge=-10, le=50, description="Average ambient temperature. Unit: °C. Accepted range: -10 to 50.")
-    humidity: float = Field(..., ge=0, le=100, description="Relative humidity of the air. Unit: %. Accepted range: 0–100.")
-    ph: float = Field(..., ge=0, le=14, description="Soil pH level. Accepted range: 0 (very acidic) to 14 (very alkaline). Neutral is 7.")
-    moisture: float = Field(..., ge=0, le=100, description="Soil moisture content. Unit: %. Accepted range: 0–100%.")
-    soil_type: SoilType = Field(..., description="Soil texture classification")
+    model_config = {"json_schema_extra": {"example": {
+        "temperature": 16.0,
+        "humidity": 67.0,
+        "moisture": 40.0,
+        "soil_type": "loamy",
+        "nitrogen": 155.0,
+        "ph": 6.6,
+    }}}
+
+    temperature: float = Field(
+        ..., ge=2, le=35,
+        description="Growing-season average temperature (°C). Typical range: 9–26.",
+    )
+    humidity: float = Field(
+        ..., ge=20, le=98,
+        description="Relative air humidity (%). Typical range: 42–78.",
+    )
+    moisture: float = Field(
+        ..., ge=8, le=85,
+        description="Soil moisture content (%). Typical range: 22–64.",
+    )
+    soil_type: SoilType = Field(..., description="Soil texture classification.")
+    nitrogen: float = Field(
+        ..., ge=10, le=400,
+        description="Total soil nitrogen (cg/kg). Typical range: 65–215.",
+    )
+    ph: float = Field(
+        ..., ge=3.5, le=9.5,
+        description="Soil pH. Typical range: 5.7–7.1.",
+    )

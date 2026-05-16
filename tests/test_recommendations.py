@@ -6,13 +6,12 @@ from app.main import app
 client = TestClient(app)
 
 VALID_PAYLOAD = {
-    "nitrogen": 90.0,
-    "phosphorus": 42.0,
-    "potassium": 43.0,
-    "temperature": 20.88,
-    "humidity": 82.0,
-    "ph": 6.5,
-    "rainfall": 202.93,
+    "temperature": 16.0,
+    "humidity": 67.0,
+    "moisture": 40.0,
+    "soil_type": "loamy",
+    "nitrogen": 155.0,
+    "ph": 6.6,
 }
 
 
@@ -20,12 +19,15 @@ def test_recommend_crops_success():
     response = client.post("/api/recommendations/crops", json=VALID_PAYLOAD)
     assert response.status_code == 200
     data = response.json()
-    assert "recommendations" in data
-    assert len(data["recommendations"]) > 0
-    first = data["recommendations"][0]
+    assert "recommended_crop" in data
+    assert "confidence" in data
+    assert "top_3_crops" in data
+    assert len(data["top_3_crops"]) == 3
+    first = data["top_3_crops"][0]
     assert "crop" in first
-    assert "recommendation_score" in first
-    assert 0.0 <= first["recommendation_score"] <= 1.0
+    assert "confidence" in first
+    assert 0.0 <= first["confidence"] <= 1.0
+    assert data["recommended_crop"] == data["top_3_crops"][0]["crop"]
 
 
 def test_recommend_crops_missing_fields():
@@ -33,14 +35,14 @@ def test_recommend_crops_missing_fields():
     assert response.status_code == 422
 
 
-def test_recommend_crops_out_of_range():
-    payload = {**VALID_PAYLOAD, "ph": 20.0}  # ph must be 0-14
+def test_recommend_crops_invalid_soil_type():
+    payload = {**VALID_PAYLOAD, "soil_type": "volcanic"}
     response = client.post("/api/recommendations/crops", json=payload)
     assert response.status_code == 422
 
 
-def test_recommend_crops_negative_value():
-    payload = {**VALID_PAYLOAD, "humidity": -5.0}
+def test_recommend_crops_out_of_range_humidity():
+    payload = {**VALID_PAYLOAD, "humidity": 5.0}  # below ge=20
     response = client.post("/api/recommendations/crops", json=payload)
     assert response.status_code == 422
 

@@ -2,13 +2,12 @@ import pandas as pd
 from typing import List, Tuple
 
 _COLUMN_MAP = {
-    "Temparature": "temperature",
+    "Temperature": "temperature",
     "Humidity": "humidity",
     "Moisture": "moisture",
     "Soil Type": "soil_type",
     "Nitrogen": "nitrogen",
-    "Potassium": "potassium",
-    "Phosphorous": "phosphorous",
+    "pH": "ph",
     "Crop Type": "crop_type",
 }
 

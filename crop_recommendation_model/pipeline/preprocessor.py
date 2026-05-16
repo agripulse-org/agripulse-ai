@@ -2,7 +2,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-NUMERIC_FEATURES = ["temperature", "humidity", "moisture", "nitrogen", "potassium", "phosphorous"]
+NUMERIC_FEATURES = ["temperature", "humidity", "moisture", "nitrogen", "ph"]
 CATEGORICAL_FEATURES = ["soil_type"]
 
 

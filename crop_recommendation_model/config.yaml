@@ -1,11 +1,10 @@
 features:
-  - nitrogen
-  - phosphorous
-  - potassium
   - temperature
   - humidity
   - moisture
   - soil_type
+  - nitrogen
+  - ph
 
 data:
   dataset_path: data/soil_crop_dataset.csv
