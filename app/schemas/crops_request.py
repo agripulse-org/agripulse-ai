@@ -31,6 +31,6 @@ class CropsRequest(BaseModel):
         description="Total soil nitrogen (cg/kg). Typical range: 65–215.",
     )
     ph: float = Field(
-        ..., ge=3.5, le=9.5,
+        ..., ge=0, le=14,
         description="Soil pH. Typical range: 5.7–7.1.",
     )
